@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Planner 💰</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        h2 {
+            color: #28a745;
+        }
+        .balance {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            width: 90%;
+        }
+        .income {
+            color: green;
+        }
+        .expense {
+            color: red;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #e9ecef;
+            margin: 5px 0;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            border-radius: 5px;
+        }
+        .delete-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+        }
+        #goal-progress {
+            font-size: 18px;
+            margin: 10px 0;
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>💰 Budget Planner</h2>
+        <p class="balance">Balance: ₹<span id="balance">0</span></p>
+        
+        <input type="text" id="desc" placeholder="Enter Description">
+        <input type="number" id="amount" placeholder="Enter Amount">
+        <select id="type">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+        </select>
+        <button onclick="addTransaction()">Add Transaction</button>
+
+        <h3>Transactions</h3>
+        <ul id="transactions"></ul>
+
+        <h3>📊 Income vs Expense Chart</h3>
+        <canvas id="budgetChart"></canvas>
+
+        <h3>🎯 Set a Savings Goal</h3>
+        <input type="number" id="goalAmount" placeholder="Enter Savings Goal (₹)">
+        <button onclick="setGoal()">Set Goal</button>
+        <p id="goal-progress">Goal Progress: ₹0 / ₹0</p>
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem("budgetData")) || [];
+        let savingsGoal = localStorage.getItem("savingsGoal") || 0;
+
+        function updateUI() {
+            const transactionList = document.getElementById("transactions");
+            transactionList.innerHTML = "";
+            let balance = 0;
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            transactions.forEach((item, index) => {
+                let li = document.createElement("li");
+                li.innerHTML = `
+                    <span class="${item.type === 'income' ? 'income' : 'expense'}">
+                        ${item.desc} - ₹${item.amount}
+                    </span>
+                    <button class="delete-btn" onclick="deleteTransaction(${index})">❌</button>
+                `;
+                transactionList.appendChild(li);
+
+                if (item.type === "income") {
+                    totalIncome += item.amount;
+                } else {
+                    totalExpense += item.amount;
+                }
+
+                balance += item.type === "income" ? item.amount : -item.amount;
+            });
+
+            document.getElementById("balance").innerText = balance;
+            document.getElementById("goal-progress").innerText = `Goal Progress: ₹${balance} / ₹${savingsGoal}`;
+            localStorage.setItem("budgetData", JSON.stringify(transactions));
+            updateChart(totalIncome, totalExpense);
+        }
+
+        function addTransaction() {
+            let desc = document.getElementById("desc").value;
+            let amount = parseFloat(document.getElementById("amount").value);
+            let type = document.getElementById("type").value;
+
+            if (desc === "" || isNaN(amount) || amount <= 0) {
+                alert("Please enter valid details.");
+                return;
+            }
+
+            transactions.push({ desc, amount, type });
+            updateUI();
+            document.getElementById("desc").value = "";
+            document.getElementById("amount").value = "";
+        }
+
+        function deleteTransaction(index) {
+            transactions.splice(index, 1);
+            updateUI();
+        }
+
+        function setGoal() {
+            let goal = parseFloat(document.getElementById("goalAmount").value);
+            if (isNaN(goal) || goal <= 0) {
+                alert("Enter a valid savings goal!");
+                return;
+            }
+            savingsGoal = goal;
+            localStorage.setItem("savingsGoal", goal);
+            updateUI();
+        }
+
+        let budgetChart;
+        function updateChart(income, expense) {
+            const ctx = document.getElementById("budgetChart").getContext("2d");
+            if (budgetChart) budgetChart.destroy();
+            budgetChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: ["Income", "Expenses"],
+                    datasets: [{
+                        data: [income, expense],
+                        backgroundColor: ["green", "red"]
+                    }]
+                }
+            });
+        }
+
+        updateUI();  // Load stored data on page load
+    </script>
+
+</body>
+</html>
